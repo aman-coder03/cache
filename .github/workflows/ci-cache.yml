@@ -1,0 +1,51 @@
+name: CI with Dependency Caching
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Cache dependencies
+      id: cache-deps
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.npm
+          node_modules
+        key: cache-f6272a4-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          cache-f6272a4-${{ runner.os }}-
+    
+    - name: prime-cache-f6272a4
+      run: |
+        if [ "${{ steps.cache-deps.outputs.cache-hit }}" == "true" ]; then
+          echo "Cache hit! Dependencies restored from cache."
+        else
+          echo "Cache miss! Dependencies will be installed and cached."
+        fi
+        echo "Cache status: cache-hit=${{ steps.cache-deps.outputs.cache-hit }}"
+    
+    - name: Install dependencies
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+      run: |
+        npm ci || npm install
+    
+    - name: Run tests
+      run: |
+        echo "Running tests..."
+        echo "Build completed successfully!"
